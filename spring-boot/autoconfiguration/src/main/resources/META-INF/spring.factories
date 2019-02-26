@@ -1,0 +1,4 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+com.github.dgrandemange.idempotencereceiver.autoconfigure.repository.memory.IdempotentReceiverRepositoryMemoryAutoConfiguration,\
+com.github.dgrandemange.idempotencereceiver.autoconfigure.repository.infinispan.IdempotentReceiverRepositoryInfinispanAutoConfiguration,\
+com.github.dgrandemange.idempotencereceiver.autoconfigure.IdempotentReceiverCommonAutoConfiguration

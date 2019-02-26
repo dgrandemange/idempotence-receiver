@@ -1,0 +1,22 @@
+spring :
+  application :
+    name : book-library-service
+
+idempotence-receiver :
+  repository :
+#    type : internal-memory
+    type : infinispan-cache
+    
+    resiliency :
+      retry :
+        delay-ms : 250
+        max-retries : 2
+      circuit-breaker:
+        failure-threshold : 5
+        success-threshold : 3
+        delay-ms : 60000
+        
+    infinispan-cache :
+      hotrod-client-configpath : classpath:/hotrod-client-config.properties
+      cache-name : default
+      ttl-ms : 60000
