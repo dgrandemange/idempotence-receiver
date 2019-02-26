@@ -1,3 +1,9 @@
+[![Build Status](https://travis-ci.org/dgrandemange/idempotence-receiver.svg?branch=develop)](https://travis-ci.org/dgrandemange/idempotence-receiver)
+
+[![Maven Central](https://img.shields.io/maven-central/v/com.github.dgrandemange/idempotence-receiver-parent.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22com.github.dgrandemange%22%20AND%20a:%22idempotence-receiver-parent%22) 
+
+[![Javadocs](http://www.javadoc.io/badge/com.github.dgrandemange/idempotence-receiver.svg)](http://www.javadoc.io/doc/com.github.dgrandemange/idempotence-receiver-parent)
+
 This project aims to help idempotence mechanism integration into a Spring MVC RESTful service.  
 * provides a way to make relevant controller handler method _idempotent_ through a simple annotation,
 * provides a dedicated Spring Boot Starter module that takes care of all dependencies declaration and Spring plumbing, while providing a set of dedicated Spring Boot properties to configure the idempotence mechanism.
@@ -21,11 +27,7 @@ See also a concrete integration example with the [webapp example](./webapp-sampl
 
 ## Add idempotence receiver spring boot starter dependency to your project 
 
-		<dependency>
-			<groupId>com.github.dgrandemange</groupId>
-			<artifactId>idempotence-receiver-spring-boot-starter</artifactId>
-			<version>${idempotence-receiver.version}</version>
-		</dependency>
+[![Maven Central](https://img.shields.io/maven-central/v/com.github.dgrandemange/idempotence-receiver-parent.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22com.github.dgrandemange%22%20AND%20a:%22idempotence-receiver-spring-boot-starter%22)
 
 ## Annotate service methods that need manual idempotence handling
 Some methods doesn't need manual idempotent management, because there are already idempotent by nature.  
