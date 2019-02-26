@@ -3,7 +3,7 @@
 
 	<groupId>com.github.dgrandemange</groupId>
 	<artifactId>idempotence-receiver-parent</artifactId>
-	<version>1.0.1-SNAPSHOT</version>
+	<version>1.0.0</version>
 
 	<name>idempotence-receiver-parent</name>
 	<packaging>pom</packaging>
