@@ -1,0 +1,33 @@
+<configuration>
+
+	<jmxConfigurator />
+
+	<!-- ===================== -->
+	<!-- Appenders definitions -->
+	<!-- ===================== -->
+	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+		<!-- encoders are assigned the type ch.qos.logback.classic.encoder.PatternLayoutEncoder 
+			by default -->
+		<encoder>
+			<pattern>%date %-4relative [%thread] %-5level %logger{35} - %msg %n
+			</pattern>
+		</encoder>
+	</appender>
+
+	<!-- ======= -->
+	<!-- Loggers -->
+	<!-- ======= -->
+	<logger name="com.github.dgrandemange.idempotencereceiver.api.aspect" level="TRACE" additivity="false">
+		<appender-ref ref="STDOUT" />
+	</logger>
+
+	<logger name="com.github.dgrandemange" level="DEBUG" additivity="false">
+		<appender-ref ref="STDOUT" />
+	</logger>
+
+	<!-- Any other messages will be routed to the 'others' appender -->
+	<root level="INFO">
+		<appender-ref ref="STDOUT" />
+	</root>
+
+</configuration>
