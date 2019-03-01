@@ -5,7 +5,7 @@ import com.github.dgrandemange.idempotencereceiver.api.model.IdempotentMethodRes
 public interface IdempotentRepository {
 
 	/**
-	 * @param idempotencyKey
+	 * @param idempotencyKey Idempotent method result identifier (key) in repository  
 	 * @param imr
 	 *            Idempotent method result
 	 * @return registered result
@@ -13,14 +13,19 @@ public interface IdempotentRepository {
 	IdempotentMethodResult register(String idempotencyKey, IdempotentMethodResult imr);
 
 	/**
-	 * @param idempotencyKey
+	 * @param idempotencyKey Idempotent method result identifier (key) in repository
 	 * @return unregistered result
 	 */
 	IdempotentMethodResult unregister(String idempotencyKey);
 
 	/**
-	 * @param idempotencyKey
+	 * @param idempotencyKey Idempotent method result identifier (key) in repository
 	 * @return result matching given idempotencyKey, null if no match
 	 */
 	IdempotentMethodResult find(String idempotencyKey);
+	
+	/**
+	 * @return repository type name
+	 */
+	String getType();
 }

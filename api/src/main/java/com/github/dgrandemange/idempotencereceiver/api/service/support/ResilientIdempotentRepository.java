@@ -44,11 +44,13 @@ public class ResilientIdempotentRepository implements IdempotentRepository {
 		        .getCircuitBreaker();
 		circuitBreaker = new CircuitBreaker<IdempotentMethodResult>().handle(IdempotentRepositoryException.class)
 		        .withFailureThreshold(circuitBreakerConfig.getFailureThreshold())
-		        .withSuccessThreshold(circuitBreakerConfig.getSuccessThreshold())
+		        .onOpen(() -> LOGGER.info("The circuit breaker has just been opened"))
+
 		        .withDelay(Duration.ofMillis(circuitBreakerConfig.getDelayMs()))
-		        .onClose(() -> LOGGER.info("The circuit breaker has been closed"))
-		        .onOpen(() -> LOGGER.info("The circuit breaker has been opened"))
-		        .onHalfOpen(() -> LOGGER.info("The circuit breaker has been half-opened"));
+		        .onHalfOpen(() -> LOGGER.info("The circuit breaker has just been half-opened"))
+
+		        .withSuccessThreshold(circuitBreakerConfig.getSuccessThreshold())
+		        .onClose(() -> LOGGER.info("The circuit breaker has just been closed"));
 	}
 
 	@Override
@@ -80,4 +82,13 @@ public class ResilientIdempotentRepository implements IdempotentRepository {
 		}
 	}
 
+	/**
+	 * @throws UnsupportedOperationException
+	 *             always thrown as this implementation is for internal use only
+	 * @see com.github.dgrandemange.idempotencereceiver.api.service.IdempotentRepository#getType()
+	 */
+	@Override
+	public String getType() {
+		throw new UnsupportedOperationException();
+	}
 }
