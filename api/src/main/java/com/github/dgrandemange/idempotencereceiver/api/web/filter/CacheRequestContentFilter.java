@@ -12,14 +12,17 @@ import org.springframework.web.filter.GenericFilterBean;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 
 public class CacheRequestContentFilter extends GenericFilterBean {
-
 	@Override
 	public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain chain)
 	        throws IOException, ServletException {
-		HttpServletRequest requestCacheWrapperObject = new ContentCachingRequestWrapper(
-		        (HttpServletRequest) servletRequest);
-		requestCacheWrapperObject.getParameterMap();
+		if (servletRequest instanceof HttpServletRequest) {
+			HttpServletRequest requestCacheWrapperObject = new ContentCachingRequestWrapper(
+			        (HttpServletRequest) servletRequest);
+			requestCacheWrapperObject.getParameterMap();
 
-		chain.doFilter(requestCacheWrapperObject, servletResponse);
+			chain.doFilter(requestCacheWrapperObject, servletResponse);
+		} else {
+			chain.doFilter(servletRequest, servletResponse);
+		}
 	}
 }

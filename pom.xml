@@ -36,7 +36,7 @@
 		<maven-scm-provider-gitexe.version>1.8.1</maven-scm-provider-gitexe.version>
 		<nexus-staging-maven-plugin.version>1.6.7</nexus-staging-maven-plugin.version>
 		<maven-source-plugin.version>2.2.1</maven-source-plugin.version>
-		<maven-javadoc-plugin.version>2.9.1</maven-javadoc-plugin.version>
+		<maven-javadoc-plugin.version>3.0.1</maven-javadoc-plugin.version>
 		<maven-gpg-plugin.version>1.6</maven-gpg-plugin.version>
 	</properties>
 
@@ -90,7 +90,7 @@
 
 			<dependency>
 				<groupId>org.springframework</groupId>
-				<artifactId>spring-web</artifactId>
+				<artifactId>spring-webmvc</artifactId>
 				<version>${spring.version}</version>
 			</dependency>
 
@@ -275,8 +275,12 @@
 					<execution>
 						<id>attach-javadocs</id>
 						<goals>
-							<goal>jar</goal>
+							<goal>aggregate-jar</goal>
 						</goals>
+						<configuration>
+							<excludePackageNames></excludePackageNames>
+							<excludePackageNames>com.github.dgrandemange.idempotencereceiver.examples</excludePackageNames>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>

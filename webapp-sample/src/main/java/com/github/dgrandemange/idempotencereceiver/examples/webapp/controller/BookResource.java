@@ -32,13 +32,13 @@ public class BookResource {
 	AtomicLong bookSeq = new AtomicLong();
 
 	/**
-	 * in-memory map to store the books<br>
+	 * in-memory book storage facility<br>
 	 */
 	Map<Long, Book> booksById = new ConcurrentHashMap<>();
 
 	@PostMapping
 	@Idempotent(registerableEx = { ResourceManagementException.class })
-	ResponseEntity<ResourceIdentifier> create(@RequestBody Book bookDTO, UriComponentsBuilder ucb) {
+	ResponseEntity<ResourceIdentifier> createWithBodyReturned(@RequestBody Book bookDTO, UriComponentsBuilder ucb) {
 		Long id = findByBook(bookDTO);
 
 		if (Objects.isNull(id)) {
@@ -58,6 +58,23 @@ public class BookResource {
 		}
 	}
 
+	ResponseEntity<?> createWithoutBodyReturned(@RequestBody Book bookDTO, UriComponentsBuilder ucb) {
+		Long id = findByBook(bookDTO);
+
+		if (Objects.isNull(id)) {
+			id = bookSeq.incrementAndGet();
+			booksById.put(id, bookDTO);
+
+			UriComponents uriComponents = ucb.path("/books/{id}").buildAndExpand(id);
+			HttpHeaders httpHeaders = new HttpHeaders();
+			httpHeaders.setLocation(uriComponents.toUri());
+
+			return ResponseEntity.created(uriComponents.toUri()).build();
+		} else {
+			throw new ResourceAlreadyExistsException(Long.toString(id));
+		}
+	}
+	
 	@GetMapping("/{id}")
 	ResponseEntity<Book> read(@PathVariable Long id) {
 		Book book = findById(id);

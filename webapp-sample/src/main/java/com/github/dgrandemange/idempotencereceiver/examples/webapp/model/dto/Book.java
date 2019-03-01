@@ -1,10 +1,6 @@
 package com.github.dgrandemange.idempotencereceiver.examples.webapp.model.dto;
 
-import java.io.Serializable;
-
-public class Book implements Serializable {
-
-	private static final long serialVersionUID = 1L;
+public class Book {
 
 	private String isbn;
 

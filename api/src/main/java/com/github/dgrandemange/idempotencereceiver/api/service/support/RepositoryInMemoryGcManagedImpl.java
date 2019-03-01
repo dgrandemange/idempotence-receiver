@@ -56,4 +56,13 @@ public class RepositoryInMemoryGcManagedImpl implements IdempotentRepository {
 		map.clear();
 	}
 
+	/**
+	 * @return {@link #REPOSITORY_TYPE}
+	 * @see com.github.dgrandemange.idempotencereceiver.api.service.IdempotentRepository#getType()
+	 */
+	@Override
+	public String getType() {
+		return REPOSITORY_TYPE;
+	}
+
 }

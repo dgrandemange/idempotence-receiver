@@ -32,4 +32,9 @@ public class InMemoryRepository implements IdempotentRepository {
 		map.clear();
 	}
 
+	@Override
+	public String getType() {
+		return null;
+	}
+
 }
