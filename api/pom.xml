@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>com.github.dgrandemange</groupId>
 		<artifactId>idempotence-receiver-parent</artifactId>
-		<version>1.0.0</version>
+		<version>1.0.1</version>
 		<relativePath>..</relativePath>
 	</parent>
 
@@ -33,7 +33,7 @@
 
 		<dependency>
 			<groupId>org.springframework</groupId>
-			<artifactId>spring-web</artifactId>
+			<artifactId>spring-webmvc</artifactId>
 		</dependency>
 
 		<dependency>
@@ -49,6 +49,12 @@
 		<dependency>
 			<groupId>org.aspectj</groupId>
 			<artifactId>aspectjrt</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot</artifactId>
+			<optional>true</optional>
 		</dependency>
 
 		<dependency>

@@ -141,4 +141,13 @@ public class RepositoryInfinispanCacheImpl implements IdempotentRepository, Reso
 	public void setRepositoryConfig(IdempotentReceiverInfinispanHotrodConfiguration repositoryConfig) {
 		this.repositoryConfig = repositoryConfig;
 	}
+	
+	/**
+	 * @return {@link #REPOSITORY_TYPE}
+	 * @see com.github.dgrandemange.idempotencereceiver.api.service.IdempotentRepository#getType()
+	 */
+	@Override
+	public String getType() {
+		return REPOSITORY_TYPE;
+	}
 }

@@ -37,13 +37,13 @@ public class IdempotentReceiverCommonProperties extends IdempotentReceiverCommon
 
 				this.setNamespace(DEFAULT_NAMESPACE);
 			} else {
-				LOGGER.info("'{}.namespace' property not defined : setting to spring application name '{}'",
-				        PREFIX, springAppName);
+				LOGGER.info("'{}.namespace' property not defined : setting to spring application name '{}'", PREFIX,
+				        springAppName);
 
 				this.setNamespace(springAppName);
 			}
 		}
-		
+
 		LOGGER.info(super.toString());
 	}
 }

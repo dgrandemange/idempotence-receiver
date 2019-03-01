@@ -3,7 +3,7 @@
 
 	<groupId>com.github.dgrandemange</groupId>
 	<artifactId>idempotence-receiver-parent</artifactId>
-	<version>1.0.0</version>
+	<version>1.0.1</version>
 
 	<name>idempotence-receiver-parent</name>
 	<packaging>pom</packaging>
@@ -34,7 +34,7 @@
 		<maven-scm-provider-gitexe.version>1.8.1</maven-scm-provider-gitexe.version>
 		<nexus-staging-maven-plugin.version>1.6.7</nexus-staging-maven-plugin.version>
 		<maven-source-plugin.version>2.2.1</maven-source-plugin.version>
-		<maven-javadoc-plugin.version>2.9.1</maven-javadoc-plugin.version>
+		<maven-javadoc-plugin.version>3.0.1</maven-javadoc-plugin.version>
 		<maven-gpg-plugin.version>1.6</maven-gpg-plugin.version>
 	</properties>
 
@@ -88,7 +88,7 @@
 
 			<dependency>
 				<groupId>org.springframework</groupId>
-				<artifactId>spring-web</artifactId>
+				<artifactId>spring-webmvc</artifactId>
 				<version>${spring.version}</version>
 			</dependency>
 
@@ -253,24 +253,6 @@
 
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-gpg-plugin</artifactId>
-				<version>${maven-gpg-plugin.version}</version>
-				<executions>
-					<execution>
-						<id>sign-artifacts</id>
-						<phase>verify</phase>
-						<goals>
-							<goal>sign</goal>
-						</goals>
-						<configuration>
-							<passphraseServerId>${gpg.keyname}</passphraseServerId>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
 				<version>${maven-source-plugin.version}</version>
 				<executions>
@@ -291,6 +273,7 @@
 					<execution>
 						<id>attach-javadocs</id>
 						<goals>
+							<goal>aggregate-jar</goal>
 							<goal>jar</goal>
 						</goals>
 					</execution>
@@ -309,4 +292,39 @@
 
 	<description>Set of modules to help idempotence mechanism integration into a Spring MVC RESTful service</description>
 	<url>https://github.com/dgrandemange/idempotence-receiver</url>
+
+	<profiles>
+		<profile>
+			<id>NOT_CI</id>
+			<activation>
+				<property>
+					<name>CONTINUOUS_INTEGRATION</name>
+					<value>false</value>
+				</property>
+			</activation>
+
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-gpg-plugin</artifactId>
+						<version>${maven-gpg-plugin.version}</version>
+						<executions>
+							<execution>
+								<id>sign-artifacts</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>sign</goal>
+								</goals>
+								<configuration>
+									<passphraseServerId>${gpg.keyname}</passphraseServerId>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+
+		</profile>
+	</profiles>
 </project>

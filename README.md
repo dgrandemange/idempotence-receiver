@@ -1,44 +1,43 @@
+[![Build Status](https://travis-ci.org/dgrandemange/idempotence-receiver.svg)](https://travis-ci.org/dgrandemange/idempotence-receiver)
+
+[![Maven Central](https://img.shields.io/maven-central/v/com.github.dgrandemange/idempotence-receiver-parent.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22com.github.dgrandemange%22%20AND%20a:%22idempotence-receiver-parent%22) 
+
+[![Javadocs](http://www.javadoc.io/badge/com.github.dgrandemange/idempotence-receiver.svg)](http://www.javadoc.io/doc/com.github.dgrandemange/idempotence-receiver-parent)
+
 This project aims to help idempotence mechanism integration into a Spring MVC RESTful service.  
 * provides a way to make relevant controller handler method _idempotent_ through a simple annotation,
 * provides a dedicated Spring Boot Starter module that takes care of all dependencies declaration and Spring plumbing, while providing a set of dedicated Spring Boot properties to configure the idempotence mechanism.
 
 # Idempotence : what, why, when
-Generally speaking, idempotence is the ability of an operation to return the same result regardless of how many times it is invoked.
+Generally speaking, idempotence is the ability of an operation to produce the same effect regardless of how many times it is invoked.
 
 In a distributed service oriented architecture (like say a micro-service architecture), where the services communicate with each other through the network, we should not consider the network as fully reliable. Meaning our services should be designed in order to be resilient to network micro-failures :
 * from a consumer service point of view, this means, for instance, being able to do some request retries when no response has been received from the invoked producer service within the allocated time (i.e. request timeout),
-* from a producer service point of view, that means being able to handle those successive retries, meaning some times (and depending on the nature of operation) guaranteeing that the repeatedly requested operation is processed once and only once
+* from a producer service point of view, that means being able to handle those successive retries, meaning some times (and depending on the nature of operation) guaranteeing that the repeatedly requested operation is processed only one time
 
-Please consider reading resources below for detailed explanations :
+Please consider reading resources below for detailed explanations, and to actually determine if you need idempotence, how you can achieve it, and if you need this library for that (which may not be the case actually) :
 * [Rest cookbook - What are idempotent and/or safe methods?](http://restcookbook.com/HTTP%20Methods/idempotency/)
 * [Understanding why and how to add idempotent requests to your APIs](https://ieftimov.com/understand-how-why-add-idempotent-requests-api)
 * [3 common pitfalls in microservice integration — and how to avoid them](https://blog.bernd-ruecker.com/3-common-pitfalls-in-microservice-integration-and-how-to-avoid-them-3f27a442cd07)
+* [Journey to Idempotency and Temporal Decoupling](https://dzone.com/articles/journey-idempotency-and)
 
 # Integration recipe
-Here below are the steps to follow to integrate idempotence into an existing Spring MVC RESTful API.
+Here below are the steps to follow to integrate manual idempotence into an existing Spring MVC RESTful API.
 
-See also a concrete integration example with the [webapp example](./webapp-sample).
+See also a concrete integration example with the [provided webapp sample](./webapp-sample).
 
 ## Add idempotence receiver spring boot starter dependency to your project 
 
-		<dependency>
-			<groupId>com.github.dgrandemange</groupId>
-			<artifactId>idempotence-receiver-spring-boot-starter</artifactId>
-			<version>${idempotence-receiver.version}</version>
-		</dependency>
+[![Maven Central](https://img.shields.io/maven-central/v/com.github.dgrandemange/idempotence-receiver-parent.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22com.github.dgrandemange%22%20AND%20a:%22idempotence-receiver-spring-boot-starter%22)
 
 ## Annotate service methods that need manual idempotence handling
 Some methods doesn't need manual idempotent management, because there are already idempotent by nature.  
-For instance, methods that only read resources, and do not affect their state, are natively idempotent and do not require manual idempotence handling. It may even reveal counter-productive to manually handle idempotence for such methods.  
+For instance, methods that only read resources, without affecting their state, are natively idempotent and do not require a special manual idempotence handling. It may even reveal counter-productive to manually handle idempotence for such methods.  
 On the other hand, methods that affect resources state, especially resource creation (usually through HTTP verb `POST` in a RESTful API) are good candidates to manual idempotence handling.  
 
 To enable manual idempotence management of a method, simply annotate it with the `@Idempotent` annotation.  
+
 As an example, look at method [com.github.dgrandemange.idempotencereceiver.examples.webapp.controller.BookResource.create(Book)](./webapp-sample/src/main/java/com/github/dgrandemange/idempotencereceiver/examples/webapp/controller/BookResource.java).
-
-Please note : only methods with a `ResponseEntity<...>` return type are eligible to idempotence handling.
-
-## Ensure your HTTP entities class are serializable
-This is required in order for the HTTP method result to be stored in remote repositories (like for instance the remote infinispan cache).
 
 ## Configure idempotence management
 Idempotence configuration is made through dedicated Spring Boot configuration properties.
@@ -51,7 +50,7 @@ Look at [IdempotentReceiverCommonConfiguration](./api/src/main/java/com/github/d
 ### Idempotence repository configuration
 Idempotence mechanism relies on a repository where idempotent method results are cached for a certain amount of time.
 
-As there are different repositories implementations available, one of the available repository implementations must be chosen and specified via the `idempotence-receiver.repository.type` property (if not set, idempotence mechanism won't be enable).  
+As there are different repositories implementations available, one of the available repository implementations must be chosen and specified via the `idempotence-receiver.repository.type` property (if not set, idempotence mechanism won't be enabled at all).  
 Each repository implementation requires its own set of configuration properties to be set. This will be detailed in the next sections.
 
 #### Repository failure resiliency common configuration

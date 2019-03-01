@@ -1,16 +1,14 @@
 package com.github.dgrandemange.idempotencereceiver.api.aspect;
 
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Date;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -34,16 +32,23 @@ import org.mockito.stubbing.Answer;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 
 import com.github.dgrandemange.idempotencereceiver.api.annot.Idempotent;
-import com.github.dgrandemange.idempotencereceiver.api.aspect.IdempotentReceiverAspect;
 import com.github.dgrandemange.idempotencereceiver.api.exception.MissingIdempotencyKeyHeaderException;
+import com.github.dgrandemange.idempotencereceiver.api.exception.SubsequentPresentationException;
+import com.github.dgrandemange.idempotencereceiver.api.exception.UnmarshallException;
 import com.github.dgrandemange.idempotencereceiver.api.model.IdempotentMethodResult;
 import com.github.dgrandemange.idempotencereceiver.api.model.IdempotentReceiverCommonConfiguration;
 import com.github.dgrandemange.idempotencereceiver.api.service.IdempotentRepository;
 import com.github.dgrandemange.idempotencereceiver.api.service.support.InMemoryRepository;
+import com.github.dgrandemange.idempotencereceiver.api.service.support.MyStringHttpMessageConverter;
 
 @RunWith(MockitoJUnitRunner.class)
 public class IdempotentReceiverAspectTest {
@@ -54,6 +59,9 @@ public class IdempotentReceiverAspectTest {
 
 	@Mock
 	IdempotentRepository repository;
+
+	@Mock
+	RequestMappingHandlerAdapter handlerAdapter;
 
 	@Mock
 	ProceedingJoinPoint joinPoint;
@@ -82,7 +90,7 @@ public class IdempotentReceiverAspectTest {
 		public ResponseEntity<String> post() {
 			waitForProcessingTime();
 
-			return new ResponseEntity<String>("dummy body" + (new Date()).getTime(), new HttpHeaders(), HttpStatus.OK);
+			return new ResponseEntity<String>("dummy body", new HttpHeaders(), HttpStatus.OK);
 		}
 
 		/**
@@ -91,7 +99,7 @@ public class IdempotentReceiverAspectTest {
 		public ResponseEntity<String> get() {
 			waitForProcessingTime();
 
-			return new ResponseEntity<String>("dummy body" + (new Date()).getTime(), new HttpHeaders(), HttpStatus.OK);
+			return new ResponseEntity<String>("dummy body", new HttpHeaders(), HttpStatus.OK);
 		}
 
 		/**
@@ -146,7 +154,6 @@ public class IdempotentReceiverAspectTest {
 
 		mockedHttpRequest.addHeader("Idempotency-Key", idempotencyKey);
 
-		Mockito.doNothing().when(cut).checkMethodReturnType(joinPoint);
 		String dummyRequestHash = "157840f0f1c1d77526a0beb9980c1170d2bc4f5fe170d8fab4309032a1640b36";
 		Mockito.doReturn(dummyRequestHash).when(cut).computeRequestHash(mockedHttpRequest);
 		Object expectedResult = new Object();
@@ -169,7 +176,6 @@ public class IdempotentReceiverAspectTest {
 		// Idempotencey key header not set
 		mockedHttpRequest.removeHeader("Idempotency-Key");
 
-		Mockito.doNothing().when(cut).checkMethodReturnType(joinPoint);
 		String dummyRequestHash = "157840f0f1c1d77526a0beb9980c1170d2bc4f5fe170d8fab4309032a1640b36";
 		Mockito.doReturn(dummyRequestHash).when(cut).computeRequestHash(mockedHttpRequest);
 		Object expectedResult = new Object();
@@ -190,8 +196,6 @@ public class IdempotentReceiverAspectTest {
 
 		// Note : no idempotency key header set in incoming Http request
 
-		Mockito.doNothing().when(cut).checkMethodReturnType(joinPoint);
-
 		try {
 			configuration.setIdempotencyKeyHeaderMandatory(true);
 			cut.core(joinPoint, annot);
@@ -210,6 +214,8 @@ public class IdempotentReceiverAspectTest {
 	public void testComputeRequestHash_shouldReturnRequestBodyComputedHash() throws Throwable {
 		mockedHttpRequest.addHeader(IdempotentReceiverAspect.HTTP_HEADER_IDEMPOTENCY_KEY,
 		        "123e4567-e89b-12d3-a456-556642440000");
+		
+		mockedHttpRequest.addHeader("X-FORWARDED-FOR", "192.168.10.100");
 		mockedHttpRequest.setRemoteAddr("127.0.0.1");
 
 		Principal mockPrincipal = Mockito.mock(Principal.class);
@@ -227,7 +233,7 @@ public class IdempotentReceiverAspectTest {
 		String requestBody = "some dummy request body contents";
 		mockedHttpRequest.setContent(requestBody.getBytes("UTF-8"));
 
-		String expectedHash = "e2a25fbc87a58e80b5651b06fcf634c1a97954bfddcc00170deff08a8ab5aa60";
+		String expectedHash = "65f4e443ad6591b8878da34f77e84381759c6a1412ebffc73c31707b08a054aa";
 
 		String idempotentKey = cut.computeRequestHash(mockedHttpRequest);
 
@@ -256,7 +262,7 @@ public class IdempotentReceiverAspectTest {
 		// No request body
 		mockedHttpRequest.setContent(null);
 
-		String expectedHash = "42b19f612f4b6fa840ad1c9df27d918506341139ca4f87a33e438805f1e31f8b";
+		String expectedHash = "54e211a44fd4a616ef6d1fb1af6be84c8aa6e967f8d228484dd7f637a0c5e305";
 
 		String idempotentKey = cut.computeRequestHash(mockedHttpRequest);
 
@@ -290,22 +296,26 @@ public class IdempotentReceiverAspectTest {
 
 		String idempotencyKey = genRequestUniqueIdentifier();
 		IdempotentMethodResult imr = IdempotentMethodResult.builder().startedAt(Instant.now())
-		        .withIdempotencyKey(idempotencyKey).hasReturned("dummy body", (new HttpHeaders()), HttpStatus.OK)
+		        .withIdempotencyKey(idempotencyKey).withResponse("dummy body".getBytes(), String.class,
+		                MediaType.TEXT_PLAIN, StringHttpMessageConverter.class, HttpHeaders.EMPTY, HttpStatus.OK)
 		        .build();
 		Mockito.doReturn(imr).when(repository).find(idempotencyKey);
 
-		Object expectedResult = new Object();
-		Mockito.doReturn(expectedResult).when(cut).handleRequestSubsequentPresentation(imr);
+		ResponseEntity<Object> expectedResponseEntity = new ResponseEntity<Object>(HttpStatus.OK);
+		Mockito.doReturn(expectedResponseEntity).when(cut).handleRequestSubsequentPresentation(imr);
 
-		Object result = cut.handleIdempotency(joinPoint, annot, idempotencyKey);
-
-		Assertions.assertThat(result).isEqualTo(expectedResult);
-		Mockito.verify(cut, Mockito.times(1)).handleRequestSubsequentPresentation(imr);
+		try {
+			cut.handleIdempotency(joinPoint, annot, idempotencyKey);
+			Fail.fail(String.format("A %s was expected", SubsequentPresentationException.class.getSimpleName()));
+		} catch (SubsequentPresentationException e) {
+			Assertions.assertThat(e.getResponseEntity()).isEqualTo(expectedResponseEntity);
+			Mockito.verify(cut, Mockito.times(1)).handleRequestSubsequentPresentation(imr);
+		}
 	}
 
 	@Test
 	@Idempotent
-	public void testHandleRequestFirstPresentation_shouldRegisterResult_whenRequestProcessedWithoutError()
+	public void testHandleRequestFirstPresentation_shouldAddIdempotentMethodResultToRequestAttribute_whenRequestProcessedWithoutError()
 	        throws Throwable {
 		Idempotent annot = new Object() {
 		}.getClass().getEnclosingMethod().getAnnotation(Idempotent.class);
@@ -334,12 +344,17 @@ public class IdempotentReceiverAspectTest {
 		}).when(joinPoint).proceed();
 
 		IdempotentMethodResult expectedImr = IdempotentMethodResult.builder().startedAt(processingStartsAt)
-		        .withIdempotencyKey(idempotencyKey).hasReturned(responseBody, responseHeaders, responseStatus).build();
+		        .withIdempotencyKey(idempotencyKey).build();
+
+		Mockito.doNothing().when(cut).addIdempotentImageResultToRequestAttributes(Mockito.any());
 
 		Object result = cut.handleRequestFirstPresentation(joinPoint, annot, idempotencyKey);
 		Assertions.assertThat(result).isEqualTo(re);
 
-		Mockito.verify(repository, Mockito.times(1)).register(Mockito.eq(idempotencyKey),
+		Mockito.verify(cut, Mockito.times(1))
+		        .registerIdempotentImageResult(Mockito.argThat(SamePropertyValuesAs.samePropertyValuesAs(expectedImr)));
+
+		Mockito.verify(cut, Mockito.times(1)).addIdempotentImageResultToRequestAttributes(
 		        Mockito.argThat(SamePropertyValuesAs.samePropertyValuesAs(expectedImr)));
 	}
 
@@ -370,7 +385,7 @@ public class IdempotentReceiverAspectTest {
 		}).when(joinPoint).proceed();
 
 		IdempotentMethodResult expectedImr = IdempotentMethodResult.builder().startedAt(processingStartsAt)
-		        .withIdempotencyKey(idempotencyKey).hasRaised(ex).build();
+		        .withIdempotencyKey(idempotencyKey).build();
 
 		ArgumentCaptor<IdempotentMethodResult> imrArgCaptor = ArgumentCaptor.forClass(IdempotentMethodResult.class);
 
@@ -379,9 +394,11 @@ public class IdempotentReceiverAspectTest {
 
 			Fail.fail(String.format("an exception of type %s was expected here", ex.getClass().getSimpleName()));
 		} catch (ArithmeticException e) {
-			Mockito.verify(repository, Mockito.times(2)).register(Mockito.eq(idempotencyKey), imrArgCaptor.capture());
+			Mockito.verify(repository, Mockito.times(1)).register(Mockito.eq(idempotencyKey), imrArgCaptor.capture());
 			IdempotentMethodResult capturedImr = imrArgCaptor.getValue();
 			Assertions.assertThat(SamePropertyValuesAs.samePropertyValuesAs(expectedImr).matches(capturedImr)).isTrue();
+			Mockito.verify(cut, Mockito.times(1)).addIdempotentImageResultToRequestAttributes(
+			        Mockito.argThat(SamePropertyValuesAs.samePropertyValuesAs(expectedImr)));
 		}
 	}
 
@@ -413,6 +430,7 @@ public class IdempotentReceiverAspectTest {
 		} catch (ArithmeticException e) {
 			Mockito.verify(repository, Mockito.times(1)).register(Mockito.eq(idempotencyKey),
 			        Mockito.argThat(SamePropertyValuesAs.samePropertyValuesAs(expectedImr)));
+			Mockito.verify(cut, Mockito.times(0)).addIdempotentImageResultToRequestAttributes(Mockito.any());
 		}
 	}
 
@@ -432,13 +450,20 @@ public class IdempotentReceiverAspectTest {
 		ResponseEntity<String> expectedRe = new ResponseEntity<String>(responseBody, expectedResponseHeaders,
 		        responseStatus);
 
-		Object result = cut.handleRequestSubsequentPresentation(
-		        IdempotentMethodResult.builder().startedAt(startedAt).withIdempotencyKey(genRequestUniqueIdentifier())
-		                .hasReturned(responseBody, responseHeaders, responseStatus).build());
+		IdempotentMethodResult imr = IdempotentMethodResult.builder().startedAt(startedAt)
+		        .withIdempotencyKey(genRequestUniqueIdentifier())
+		        .withResponse(responseBody.getBytes(), responseBody.getClass(), MediaType.TEXT_PLAIN,
+		                StringHttpMessageConverter.class, responseHeaders, responseStatus)
+		        .build();
+
+		Mockito.doReturn(responseBody).when(cut).unmarshallBody(imr);
+
+		Object result = cut.handleRequestSubsequentPresentation(imr);
 
 		Assertions.assertThat(result).isInstanceOf(ResponseEntity.class);
 		Assertions.assertThat(SamePropertyValuesAs.samePropertyValuesAs(expectedRe).matches((ResponseEntity<?>) result))
 		        .isTrue();
+		Mockito.verify(cut, Mockito.times(1)).unmarshallBody(imr);
 	}
 
 	@Test
@@ -467,32 +492,85 @@ public class IdempotentReceiverAspectTest {
 	}
 
 	@Test
-	public void testHandleRequestSubsequentPresentation_shouldRaiseException_whenIdempotentMethodResultWasAnException()
-	        throws Exception {
-		Exception expectedEx = new ArithmeticException();
+	public void testUnmarshallBody_testMessageConverterSelection_shouldExactlyMatchConverterClass1()
+	        throws HttpMessageNotReadableException, IOException, UnmarshallException {
+
+		List<HttpMessageConverter<?>> messageConverters = new ArrayList<>();
+		messageConverters.add(new MyStringHttpMessageConverter());
+		messageConverters.add(new StringHttpMessageConverter());
+		Mockito.doReturn(messageConverters).when(handlerAdapter).getMessageConverters();
+
+		IdempotentMethodResult imr = IdempotentMethodResult.builder().startedAt(Instant.now())
+		        .withIdempotencyKey("12345").withResponse("dummy body".getBytes(), String.class, MediaType.TEXT_PLAIN,
+		                StringHttpMessageConverter.class, HttpHeaders.EMPTY, HttpStatus.OK)
+		        .build();
+
+		Object unmarshalled = cut.unmarshallBody(imr);
+
+		String expectedBody = "dummy body";
+		Assertions.assertThat(unmarshalled).isEqualTo(expectedBody);
+	}
+
+	@Test
+	public void testUnmarshallBody_testMessageConverterSelection_shouldExactlyMatchConverterClass2()
+	        throws HttpMessageNotReadableException, IOException, UnmarshallException {
+
+		List<HttpMessageConverter<?>> messageConverters = new ArrayList<>();
+		messageConverters.add(new StringHttpMessageConverter());
+		messageConverters.add(new MyStringHttpMessageConverter());
+		Mockito.doReturn(messageConverters).when(handlerAdapter).getMessageConverters();
+
+		IdempotentMethodResult imr = IdempotentMethodResult.builder().startedAt(Instant.now())
+		        .withIdempotencyKey("12345").withResponse("dummy body".getBytes(), String.class, MediaType.TEXT_PLAIN,
+		                MyStringHttpMessageConverter.class, HttpHeaders.EMPTY, HttpStatus.OK)
+		        .build();
+
+		Object unmarshalled = cut.unmarshallBody(imr);
+
+		String expectedBody = "My_dummy body";
+		Assertions.assertThat(unmarshalled).isEqualTo(expectedBody);
+	}
+
+	@Test
+	public void testUnmarshallBody_testMessageConverterSelection_shouldRaiseExceptionWhenNoConverterMatches()
+	        throws HttpMessageNotReadableException, IOException, UnmarshallException {
+
+		List<HttpMessageConverter<?>> messageConverters = new ArrayList<>();
+		messageConverters.add(new StringHttpMessageConverter());
+		Mockito.doReturn(messageConverters).when(handlerAdapter).getMessageConverters();
+
+		IdempotentMethodResult imr = IdempotentMethodResult.builder().startedAt(Instant.now())
+		        .withIdempotencyKey("12345").withResponse("dummy body".getBytes(), String.class, MediaType.TEXT_PLAIN,
+		                MyStringHttpMessageConverter.class, HttpHeaders.EMPTY, HttpStatus.OK)
+		        .build();
 
 		try {
-			cut.handleRequestSubsequentPresentation(IdempotentMethodResult.builder().startedAt(Instant.now())
-			        .withIdempotencyKey(genRequestUniqueIdentifier()).hasRaised(expectedEx).build());
-			Fail.fail(
-			        String.format("An exception of type %s was expected here", expectedEx.getClass().getSimpleName()));
-		} catch (ArithmeticException e) {
-			Assertions.assertThat(e).isEqualTo(expectedEx);
+			cut.unmarshallBody(imr);
+		} catch (UnmarshallException e) {
+			Assertions.assertThat(e.getImr()).isEqualTo(imr);
 		}
 	}
 
 	@Test
-	public void testCheckMethodReturnType_shouldReturnWithoutError_whenOfTypeResponseEntity() throws Exception {
-		Mockito.when(signature.getReturnType()).thenReturn(ResponseEntity.class);
-		Mockito.when(signature.toLongString()).thenReturn("myMockedMethod()");
-		cut.checkMethodReturnType(joinPoint);
-	}
+	public void testUnmarshallBody_testMessageConverterSelection_shouldRaiseExceptionWhenBodyTypeIsNotFound()
+	        throws HttpMessageNotReadableException, IOException, UnmarshallException {
 
-	@Test(expected = UnsupportedOperationException.class)
-	public void testCheckMethodReturnType_shouldRaiseException_whenNotOfTypeResponseEntity() throws Exception {
-		Mockito.when(signature.getReturnType()).thenReturn(String.class);
-		Mockito.when(signature.toLongString()).thenReturn("myMockedMethod()");
-		cut.checkMethodReturnType(joinPoint);
+		List<HttpMessageConverter<?>> messageConverters = new ArrayList<>();
+		messageConverters.add(new StringHttpMessageConverter());
+		Mockito.doReturn(messageConverters).when(handlerAdapter).getMessageConverters();
+
+		IdempotentMethodResult imr = IdempotentMethodResult.builder().startedAt(Instant.now())
+		        .withIdempotencyKey("12345").withResponse("dummy body".getBytes(), String.class, MediaType.TEXT_PLAIN,
+		                MyStringHttpMessageConverter.class, HttpHeaders.EMPTY, HttpStatus.OK)
+		        .build();
+		imr.setReturnTypeName("some.non.existing.package.1111Abcd");
+
+		try {
+			cut.unmarshallBody(imr);
+		} catch (UnmarshallException e) {
+			Assertions.assertThat(e.getImr()).isEqualTo(imr);
+			Assertions.assertThat(e.getCause()).isInstanceOf(ClassNotFoundException.class);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -515,82 +593,37 @@ public class IdempotentReceiverAspectTest {
 	}
 
 	@Test
-	public void testAspectWeaving_shouldHandleIdempotency_whenWeavedOnCompatibleMethod() throws InterruptedException {
-		MyDummyRestWebService proxy = commonPrepareTestAspectWeaving();
+	public void testAspectWeaving_shouldBeWeaved_OnAnnotatedMethod()
+	        throws InterruptedException, NoSuchAlgorithmException, IOException {
+		InMemoryRepository repo = new InMemoryRepository();
+		MyDummyRestWebService proxy = commonPrepareTestAspectWeaving(repo);
 
-		// 1st presentation
-		ResponseEntity<String> resp1 = proxy.post();
+		Mockito.doReturn("12345").when(cut).computeRequestHash(mockedHttpRequest);
 
-		// Wait some time before representation of request
-		Thread.sleep(10);
+		// Invoke a web service method explicitly declared idempotent
+		proxy.post();
 
-		// 2nd presentation (same idempotency key)
-		ResponseEntity<String> resp2 = proxy.post();
-
-		// Same responses content expected
-		Assertions.assertThat(resp1.getBody()).isEqualTo(resp2.getBody());
+		IdempotentMethodResult imr = repo.find("12345");
+		Assertions.assertThat(imr).isNotNull();
 	}
 
 	@Test
-	public void testAspectWeaving_shouldHandleIdempotency_whenWeavedOnCompatibleMethod_firstRequestStillProcessingCase()
-	        throws InterruptedException, ExecutionException {
-		ExecutorService executor = Executors.newFixedThreadPool(2);
-		try {
+	public void testAspectWeaving_shouldNotBeWeaved_onUnannotedMethod()
+	        throws InterruptedException, NoSuchAlgorithmException, IOException {
+		InMemoryRepository repo = new InMemoryRepository();
+		MyDummyRestWebService proxy = commonPrepareTestAspectWeaving(repo);
 
-			final MyDummyRestWebService proxy = commonPrepareTestAspectWeaving();
-			proxy.setDummyProcessingTimeMs(1000);
+		Mockito.doReturn("12345").when(cut).computeRequestHash(mockedHttpRequest);
 
-			// 1st presentation (launched asynchronously in another thread)
-			Future<ResponseEntity<String>> futureResp1 = executor.submit(() -> proxy.post());
+		// Invoke a web service method NOT declared idempotent
+		proxy.get();
 
-			// Wait some time before representation of request (should be short enough so
-			// that first request processing is still running)
-			Thread.sleep(100);
-
-			// 2nd presentation (same idempotency key)
-			ResponseEntity<String> resp2 = proxy.post();
-
-			// Check 2nd presentation response
-			Assertions.assertThat(resp2.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
-			Assertions
-			        .assertThat(
-			                resp2.getHeaders().containsKey(IdempotentReceiverAspect.HTTP_HEADER_PROCESSING_DURATION))
-			        .isTrue();
-
-			// Wait 1st presentation response
-			futureResp1.get();
-		} finally {
-			executor.shutdownNow();
-		}
+		IdempotentMethodResult imr = repo.find("12345");
+		Assertions.assertThat(imr).isNull();
 	}
 
-	@Test
-	public void testAspectWeaving_shouldNotBeWeaved_onUnannotedMethods() throws InterruptedException {
-		MyDummyRestWebService proxy = commonPrepareTestAspectWeaving();
-
-		// 1st presentation
-		ResponseEntity<String> resp1 = proxy.get();
-
-		// Wait some time before representation of request
-		Thread.sleep(10);
-
-		// 2nd presentation (same idempotency key)
-		ResponseEntity<String> resp2 = proxy.get();
-
-		// Different responses content expected
-		Assertions.assertThat(resp1.getBody()).isNotEqualTo(resp2.getBody());
-	}
-
-	@Test(expected = UnsupportedOperationException.class)
-	public void testAspectWeaving_shouldRaisException_whenWeavedOnIncompatibleMethod() throws InterruptedException {
-		MyDummyRestWebService proxy = commonPrepareTestAspectWeaving();
-
-		proxy.delete();
-	}
-
-	private MyDummyRestWebService commonPrepareTestAspectWeaving() {
-		InMemoryRepository inMemRepository = new InMemoryRepository();
-		cut.setRepository(inMemRepository);
+	private MyDummyRestWebService commonPrepareTestAspectWeaving(IdempotentRepository repo) {
+		cut.setRepository(repo);
 
 		String idempotencyKey = genRequestUniqueIdentifier();
 		mockedHttpRequest.addHeader("Idempotency-Key", idempotencyKey);
