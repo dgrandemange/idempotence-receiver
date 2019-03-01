@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/dgrandemange/idempotence-receiver.svg?branch=develop)](https://travis-ci.org/dgrandemange/idempotence-receiver)
+[![Build Status](https://travis-ci.org/dgrandemange/idempotence-receiver.svg)](https://travis-ci.org/dgrandemange/idempotence-receiver)
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.github.dgrandemange/idempotence-receiver-parent.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22com.github.dgrandemange%22%20AND%20a:%22idempotence-receiver-parent%22) 
 

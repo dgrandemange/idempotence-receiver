@@ -276,11 +276,8 @@
 						<id>attach-javadocs</id>
 						<goals>
 							<goal>aggregate-jar</goal>
+							<goal>jar</goal>
 						</goals>
-						<configuration>
-							<excludePackageNames></excludePackageNames>
-							<excludePackageNames>com.github.dgrandemange.idempotencereceiver.examples</excludePackageNames>
-						</configuration>
 					</execution>
 				</executions>
 			</plugin>
