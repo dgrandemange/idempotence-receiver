@@ -2,7 +2,7 @@
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.github.dgrandemange/idempotence-receiver-parent.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22com.github.dgrandemange%22%20AND%20a:%22idempotence-receiver-parent%22) 
 
-[![Javadocs](http://www.javadoc.io/badge/com.github.dgrandemange/idempotence-receiver.svg)](http://www.javadoc.io/doc/com.github.dgrandemange/idempotence-receiver-parent)
+[![Javadocs](http://www.javadoc.io/badge/com.github.dgrandemange/idempotence-receiver-parent.svg)](http://www.javadoc.io/doc/com.github.dgrandemange/idempotence-receiver-parent)
 
 This project aims to help idempotence mechanism integration into a Spring MVC RESTful service.  
 * provides a way to make relevant controller handler method _idempotent_ through a simple annotation,
